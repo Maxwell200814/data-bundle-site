@@ -1,0 +1,421 @@
+# MTN Bundles Website - Complete Setup Guide
+
+A full-stack web application for selling MTN data bundles with automated delivery, payment integration, and admin dashboard.
+
+## 🌟 Features
+
+### User Features
+- ✅ User Registration & Login
+- ✅ Browse Available Data Bundles
+- ✅ Secure Payment Processing (Paystack/Flutterwave)
+- ✅ Automated Bundle Delivery
+- ✅ Order History
+- ✅ Responsive Design (Mobile & Desktop)
+
+### Admin Features
+- ✅ Dashboard with Sales Analytics
+- ✅ Order Management
+- ✅ User Management
+- ✅ Real-time Statistics
+
+## 🛠 Technology Stack
+
+### Frontend
+- React.js with JSX
+- Lucide Icons
+- CSS-in-JS Styling
+
+### Backend
+- Node.js
+- Express.js
+- JWT Authentication
+- bcryptjs for Password Hashing
+
+### Payment Integration
+- Paystack
+- Flutterwave
+
+## 📋 Prerequisites
+
+Before you begin, make sure you have these installed on your computer:
+
+1. **Node.js** (v16 or higher)
+   - Download from: https://nodejs.org/
+   - Check installation: `node --version`
+
+2. **npm** (comes with Node.js)
+   - Check installation: `npm --version`
+
+3. **Text Editor** (Recommended: VS Code)
+   - Download from: https://code.visualstudio.com/
+
+## 🚀 Installation & Setup
+
+### Step 1: Create Project Folder
+
+```bash
+# Create a new folder for your project
+mkdir mtn-bundles-website
+cd mtn-bundles-website
+
+# Create frontend and backend folders
+mkdir frontend
+mkdir backend
+```
+
+### Step 2: Setup Backend
+
+```bash
+# Go to backend folder
+cd backend
+
+# Copy the server.js and package.json files here
+
+# Install dependencies
+npm install
+
+# Create .env file
+cp .env.example .env
+```
+
+**Edit the `.env` file** with your actual credentials:
+
+```env
+PORT=5000
+JWT_SECRET=change-this-to-a-random-secret-key
+FRONTEND_URL=http://localhost:3000
+
+# Get these from Paystack Dashboard (https://dashboard.paystack.com)
+PAYSTACK_SECRET_KEY=sk_test_your_key
+PAYSTACK_PUBLIC_KEY=pk_test_your_key
+
+# Get these from Flutterwave Dashboard (https://dashboard.flutterwave.com)
+FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-your_key
+FLUTTERWAVE_PUBLIC_KEY=FLWPUBK_TEST-your_key
+```
+
+### Step 3: Setup Frontend with React
+
+```bash
+# Go back to root folder
+cd ..
+
+# Create React app
+npx create-react-app frontend
+
+# Go to frontend folder
+cd frontend
+
+# Install additional dependencies
+npm install lucide-react axios
+```
+
+**Replace the contents of `src/App.js`** with the `mtn-bundles-app.jsx` code.
+
+### Step 4: Configure Frontend to Connect to Backend
+
+Create a new file `frontend/src/api.js`:
+
+```javascript
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Add token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const authAPI = {
+  register: (data) => api.post('/auth/register', data),
+  login: (data) => api.post('/auth/login', data)
+};
+
+export const bundlesAPI = {
+  getAll: () => api.get('/bundles'),
+  getOne: (id) => api.get(`/bundles/${id}`)
+};
+
+export const ordersAPI = {
+  create: (data) => api.post('/orders', data),
+  getUserOrders: () => api.get('/orders/user'),
+  process: (id, data) => api.post(`/orders/${id}/process`, data)
+};
+
+export const adminAPI = {
+  getStats: () => api.get('/admin/stats'),
+  getOrders: () => api.get('/admin/orders'),
+  getUsers: () => api.get('/admin/users')
+};
+
+export default api;
+```
+
+## 🎯 Running the Application
+
+### Option 1: Run Backend and Frontend Separately
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+npm run dev
+# Server will run on http://localhost:5000
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm start
+# App will open on http://localhost:3000
+```
+
+### Option 2: Using Concurrently (Recommended)
+
+Install concurrently in the root folder:
+
+```bash
+# In root folder
+npm init -y
+npm install concurrently --save-dev
+```
+
+Update root `package.json`:
+
+```json
+{
+  "scripts": {
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  }
+}
+```
+
+Now you can run both with one command:
+```bash
+npm run dev
+```
+
+## 🔐 Payment Gateway Setup
+
+### Paystack Setup
+
+1. Create account at https://paystack.com
+2. Go to Settings → API Keys & Webhooks
+3. Copy your Test Secret Key and Public Key
+4. Add to `.env` file
+5. Set webhook URL: `http://your-domain.com/api/webhooks/paystack`
+
+### Flutterwave Setup
+
+1. Create account at https://flutterwave.com
+2. Go to Settings → API
+3. Copy your Test Secret Key and Public Key
+4. Add to `.env` file
+5. Set webhook URL: `http://your-domain.com/api/webhooks/flutterwave`
+
+## 📱 MTN Bundle Delivery Integration
+
+To integrate actual bundle delivery, you need to:
+
+1. **Contact MTN** or use a third-party provider like:
+   - Clubkonnect
+   - VTpass
+   - BuyPower
+
+2. **Get API Credentials** from the provider
+
+3. **Update the `deliverBundle` function** in `server.js`:
+
+```javascript
+async function deliverBundle(phoneNumber, bundleSize) {
+  try {
+    const response = await axios.post(
+      'https://provider-api.com/deliver',
+      {
+        phoneNumber: phoneNumber,
+        dataSize: bundleSize,
+        apiKey: process.env.PROVIDER_API_KEY
+      }
+    );
+    
+    return {
+      success: response.data.success,
+      message: response.data.message
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+```
+
+## 🗄 Database Setup (Optional but Recommended)
+
+### Using MongoDB
+
+```bash
+# Install MongoDB
+npm install mongoose
+
+# Update server.js to use MongoDB instead of in-memory database
+```
+
+Create `models/User.js`:
+```javascript
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: { type: String, required: true, unique: true },
+  email: String,
+  password: { type: String, required: true },
+  isAdmin: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('User', userSchema);
+```
+
+### Using PostgreSQL
+
+```bash
+# Install PostgreSQL packages
+npm install pg sequelize
+```
+
+## 🎨 Customization
+
+### Change Colors
+
+Edit the CSS variables in the React app:
+
+```css
+:root {
+  --primary: #FFCC00;        /* MTN Yellow */
+  --primary-dark: #E6B800;
+  --secondary: #0066CC;       /* MTN Blue */
+  --dark: #1a1a1a;
+  /* ... other colors */
+}
+```
+
+### Add More Bundles
+
+Update the `database.bundles` array in `server.js`:
+
+```javascript
+bundles: [
+  { id: 7, size: '75GB', validity: '30 Days', price: 15000, popular: false },
+  // Add more bundles...
+]
+```
+
+## 🚢 Deployment
+
+### Deploy Backend (Heroku)
+
+```bash
+# Install Heroku CLI
+# Login to Heroku
+heroku login
+
+# Create app
+heroku create mtn-bundles-api
+
+# Set environment variables
+heroku config:set JWT_SECRET=your-secret
+heroku config:set PAYSTACK_SECRET_KEY=your-key
+
+# Deploy
+git push heroku main
+```
+
+### Deploy Frontend (Vercel/Netlify)
+
+**Vercel:**
+```bash
+npm install -g vercel
+cd frontend
+vercel
+```
+
+**Netlify:**
+```bash
+cd frontend
+npm run build
+# Upload the 'build' folder to Netlify
+```
+
+## 🔒 Security Best Practices
+
+1. **Never commit `.env` file** to Git
+2. **Use strong JWT secrets** in production
+3. **Enable HTTPS** for production
+4. **Implement rate limiting** for API endpoints
+5. **Validate all user inputs**
+6. **Use environment-specific configs**
+
+## 📝 Demo Credentials
+
+**Admin Account:**
+- Phone: 0801234567
+- Password: admin123
+
+**Regular User:**
+- Any phone number
+- Any password
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
+```bash
+# Kill process on port 5000
+lsof -ti:5000 | xargs kill
+```
+
+### CORS Errors
+Make sure backend has CORS enabled and frontend URL is correct in `.env`
+
+### Payment Not Working
+- Check API keys are correct
+- Verify webhook URLs
+- Check payment gateway dashboard for errors
+
+## 📞 Support
+
+For issues or questions:
+- Check the console for error messages
+- Verify all dependencies are installed
+- Ensure `.env` file is properly configured
+
+## 📄 License
+
+MIT License - Feel free to use this for commercial projects!
+
+## 🎉 Next Steps
+
+1. Add email notifications
+2. Implement SMS alerts
+3. Add transaction history export
+4. Create mobile app version
+5. Add wallet system
+6. Implement referral program
+
+---
+
+**Made with ❤️ for MTN Bundle Sellers**
